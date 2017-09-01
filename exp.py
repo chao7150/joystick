@@ -1,4 +1,4 @@
-import pygame 
+import pygame
 import sys
 import random
 import math
@@ -7,16 +7,18 @@ import math
 BLOCK_NUM = 4
 CYCLE_NUM = 4
 TARGET_POS = [0, 45, 90, 135, 180, 225, 270, 315]
-TARGET_DISTANCE = 180
+TARGET_DISTANCE = 300
+RADIUS = 10
 
-SCREEN_SIZE = (640, 480)
+SCREEN_SIZE = (1000, 750)
 SCREEN_CENTER = (int(SCREEN_SIZE[0] / 2), int(SCREEN_SIZE[1] / 2))
-JOYSTICK_SCALE = 200
+JOYSTICK_SCALE = 350
 
-FPS = 60
+FPS = 100
 ROTATE_ANGLE = [45, -45]
 TIMELIMIT = 300
 WAITTIME = 60
+OFFSET = 10
 
 #2点間の距離を計算する関数。あちこちで使うので定義しておく。
 def distance(p1, p2):
@@ -25,9 +27,8 @@ def distance(p1, p2):
 
 #ここから始まる
 def main():
-    #get subject name 
+    #get subject name
     sbjName = input('Input subject name: ')
-
     #もろもろの初期化。最初に１回やればいい。
     pygame.init()
     joystick = pygame.joystick.Joystick(0)
@@ -55,14 +56,16 @@ def ready(screen):
     #無限ループ
     while True:
         #準備した文字を表示する
+        pygame.event.pump()
         screen.blit(text, (320, 240))
         pygame.display.update()
+        print("a")
         for e in pygame.event.get():
             #ウィンドウ左上の終了ボタンが押されたらプログラムを終了する
             if e.type == pygame.QUIT:
                 sys.exit()
             #エンターキーが押されたらmain()に戻る
-            if (e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN):
+            if e.type == pygame.JOYBUTTONUP:
                 return
 
 #一回一回の課題の内容をここで定義する
@@ -75,11 +78,12 @@ def task(screen, joystick, block, cycle, target):
     #print("block: {0}, cycle: {1}".format(block, cycle))
     #時間制限をつけるため、最初に許容フレーム数を入れておいてカウントダウンする
     remainingTime = TIMELIMIT
+    frame = OFFSET
     #カウントダウンタイマーが0より大きい限り繰り返す
     while remainingTime > 0:
         #FPSの設定
         clock.tick_busy_loop(FPS)
-        
+
         if block % 2:
             screen.fill((0, 0, 0))
         else:
@@ -90,9 +94,9 @@ def task(screen, joystick, block, cycle, target):
             int(SCREEN_CENTER[1] + TARGET_DISTANCE * math.sin(math.radians(target)))
         )
         #ターゲットの描画
-        pygame.draw.circle(screen, (255, 255, 255), targetPosition, 10, 2)
+        pygame.draw.circle(screen, (255, 255, 255), targetPosition, RADIUS, 2)
         #中心点の描画
-        pygame.draw.circle(screen, (255, 255, 255), SCREEN_CENTER, 10, 2)
+        pygame.draw.circle(screen, (255, 255, 255), SCREEN_CENTER, RADIUS, 2)
         #カーソルを描画しその座標をposに格納する
         pos = drawCursor(screen, joystick, block)
         #print(clock.get_fps())
@@ -100,9 +104,14 @@ def task(screen, joystick, block, cycle, target):
         pygame.display.update()
         #ループを一回繰り返すごとに（１フレームごとに）カウントダウンタイマーの値を１減らす
         remainingTime -= 1
+        print(frame)
         #接触判定。カーソルとターゲットの距離が10以下ならループの外に出る
-        if distance(pos, targetPosition) < 10:
-            break
+        if distance(pos, targetPosition) < RADIUS:
+            frame -= 1
+            if frame == 0:
+                break
+        else:
+            frame = OFFSET
         for e in pygame.event.get():
             #ウィンドウ左上の終了ボタンが押されたらプログラムを終了する
             if e.type == pygame.QUIT:
@@ -124,7 +133,7 @@ def task(screen, joystick, block, cycle, target):
         else:
             screen.fill((100, 0, 0))
         #カーソルと画面中央の距離が１０ピクセル以下なら
-        if distance(pos, SCREEN_CENTER) < 10:
+        if distance(pos, SCREEN_CENTER) < RADIUS:
             #waitTimeを１減らす
             waitTime -= 1
             #中央を表す円の色を緑にする
@@ -135,7 +144,7 @@ def task(screen, joystick, block, cycle, target):
             waitTime = WAITTIME
             #中央を表す円の色を赤にする
             circleColor = (255, 128, 128)
-        pygame.draw.circle(screen, circleColor, SCREEN_CENTER, 10, 2)
+        pygame.draw.circle(screen, circleColor, SCREEN_CENTER, RADIUS, 2)
         pos = drawCursor(screen, joystick, block)
         pygame.display.update()
         #ウィンドウ左上の終了ボタンが押されたらプログラムを終了する
