@@ -79,11 +79,11 @@ def task(screen, joystick, block, cycle, target):
     while remainingTime > 0:
         #FPSの設定
         clock.tick_busy_loop(FPS)
-        #
-        # if block % 2:
-        #     screen.fill((0, 0, 0))
-        # else:
-        #     screen.fill((100, 0, 0))
+        
+        if block % 2:
+            screen.fill((0, 0, 0))
+        else:
+            screen.fill((100, 0, 0))
         #ターゲットの位置を計算
         targetPosition = (
             int(SCREEN_CENTER[0] + TARGET_DISTANCE * math.cos(math.radians(target))),
@@ -119,10 +119,10 @@ def task(screen, joystick, block, cycle, target):
     while waitTime > 0:
         #FPSの設定
         clock.tick_busy_loop(FPS)
-        # if block % 2:
-        #     screen.fill((0, 0, 0))
-        # else:
-        #     screen.fill((100, 0, 0))
+        if block % 2:
+            screen.fill((0, 0, 0))
+        else:
+            screen.fill((100, 0, 0))
         #カーソルと画面中央の距離が１０ピクセル以下なら
         if distance(pos, SCREEN_CENTER) < 10:
             #waitTimeを１減らす
