@@ -6,28 +6,19 @@ import csv
 from datetime import datetime
 
 #様々な定数の決定
-BLOCK_NUM = 4
+BLOCK_NUM = 1
 CYCLE_NUM = 1
-TARGET_POS = [
-[500,304],
-[638,359],
-[699,500],
-[657,658],
-[500,697],
-[337,663],
-[300,500],
-[343,341],
-]
+TARGET_POS = [i*45 for i in range(8)]
 TARGET_DISTANCE = 300
-RADIUS = 10
+RADIUS = 15
 
-SCREEN_SIZE = (1000, 1000)
+SCREEN_SIZE = (1000, 750)
 SCREEN_CENTER = (int(SCREEN_SIZE[0] / 2), int(SCREEN_SIZE[1] / 2))
-JOYSTICK_SCALE = 200
+JOYSTICK_SCALE = 350
 
 FPS = 60
-ROTATE_ANGLE = [0, 0]
-TIMELIMIT = 3000
+ROTATE_ANGLE = [40, -40]
+TIMELIMIT = 80
 WAITTIME = 50
 OFFSET = 1
 
@@ -50,7 +41,7 @@ def main():
 
     #ブロック・サイクルの構造はここに集約しておく。ブロックが終わるたびにready()に飛んで休憩させる。
     for block in range(BLOCK_NUM):
-        #ready(screen)
+        ready(screen)
         for cycle in range(CYCLE_NUM):
             #１サイクルごとにターゲット位置のリストをシャッフルする
             random.shuffle(TARGET_POS)
@@ -102,7 +93,10 @@ def task(screen, recorder, joystick, block, cycle, target):
         else:
             screen.fill((100, 0, 0))
         #ターゲットの位置を計算
-        targetPosition = target
+        targetPosition = (
+              int(SCREEN_CENTER[0] + TARGET_DISTANCE * math.cos(math.radians(target))),
+              int(SCREEN_CENTER[1] + TARGET_DISTANCE * math.sin(math.radians(target)))
+          )
         #ターゲットの描画
         pygame.draw.circle(screen, (255, 255, 255), targetPosition, RADIUS, 2)
         #中心点の描画
@@ -112,7 +106,7 @@ def task(screen, recorder, joystick, block, cycle, target):
         # pygame.draw.line(screen, (255, 255, 255), (SCREEN_CENTER[0] - 300, SCREEN_CENTER[1] - 300), (SCREEN_CENTER[0] + 300, SCREEN_CENTER[1] + 300))
         # pygame.draw.line(screen, (255, 255, 255), (SCREEN_CENTER[0] + 300, SCREEN_CENTER[1] - 300), (SCREEN_CENTER[0] - 300, SCREEN_CENTER[1] + 300))
         #カーソルを描画しその座標をposに格納する
-        pos = drawCursor(screen, joystick, block)
+        pos = drawCursor(screen, joystick, block, False)
         tmplog.append([block, cycle, target, pos[0], pos[1]])
         #print(clock.get_fps())
         #screen.blit(text, (320, 240))
@@ -138,6 +132,16 @@ def task(screen, recorder, joystick, block, cycle, target):
             if (e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN):
                 return
 
+    respos = velocity(tmplog)
+    respos = [
+    (respos[0] - SCREEN_CENTER[0]) / distance(respos, SCREEN_CENTER) * TARGET_DISTANCE + SCREEN_CENTER[0],
+    (respos[1] - SCREEN_CENTER[1]) / distance(respos, SCREEN_CENTER) * TARGET_DISTANCE + SCREEN_CENTER[1]
+    ]
+    dist1 = distance(SCREEN_CENTER, respos)
+    dist2 = distance(SCREEN_CENTER, targetPosition)
+    dist3 = distance(respos, targetPosition)
+    error = math.degrees(math.acos((dist1 ** 2 + dist2 ** 2 - dist3 ** 2) / (2 * dist1 * dist2)))
+    recorder.velappend([[block, cycle, targetPosition[0], targetPosition[1], respos[0], respos[1], error]])
     #ターゲットに接触するか時間制限に到達したらbackフェーズに入る。
     #一定時間（WAITTIME）中央にカーソルが置かれたら次の試行に入る
     waitTime = WAITTIME
@@ -161,7 +165,9 @@ def task(screen, recorder, joystick, block, cycle, target):
             #中央を表す円の色を赤にする
             circleColor = (255, 128, 128)
         pygame.draw.circle(screen, circleColor, SCREEN_CENTER, RADIUS, 2)
-        pos = drawCursor(screen, joystick, block)
+        pygame.draw.line(screen, (128, 128, 255), (respos[0] - 10, respos[1]), (respos[0] + 10, respos[1]), 2)
+        pygame.draw.line(screen, (128, 128, 255), (respos[0], respos[1] - 10), (respos[0], respos[1] + 10), 2)
+        pos = drawCursor(screen, joystick, block, True)
         pygame.display.update()
         #ウィンドウ左上の終了ボタンが押されたらプログラムを終了する
         for e in pygame.event.get():
@@ -171,7 +177,7 @@ def task(screen, recorder, joystick, block, cycle, target):
     return tmplog
 
 #カーソルを描画するための関数
-def drawCursor(screen, joystick, block):
+def drawCursor(screen, joystick, block, visible):
     #ブロックが奇数か偶数かで変換角度を変える
     rotateAngle = math.radians(ROTATE_ANGLE[0]) if block % 2 == 0 else math.radians(ROTATE_ANGLE[1])
     #ジョイスティックの値（-1 ~ 1）を取得し、原点が画面の中央に来るように標準化
@@ -182,29 +188,47 @@ def drawCursor(screen, joystick, block):
     ry = int((x - SCREEN_CENTER[0]) * math.sin(rotateAngle) + (y - SCREEN_CENTER[1]) * math.cos(rotateAngle)) + SCREEN_CENTER[1]
     # pygame.draw.line(screen, (128, 128, 128), (x - 10, y), (x + 10, y), 2)
     # pygame.draw.line(screen, (128, 128, 128), (x, y - 10), (x, y + 10), 2)
-    #カーソルを十字で表示するため、縦と横の線分を別々に描画する
-    pygame.draw.line(screen, (255, 255, 255), (rx - 10, ry), (rx + 10, ry), 2)
-    pygame.draw.line(screen, (255, 255, 255), (rx, ry - 10), (rx, ry + 10), 2)
+    if visible:
+        #カーソルを十字で表示するため、縦と横の線分を別々に描画する
+        pygame.draw.line(screen, (255, 255, 255), (rx - 10, ry), (rx + 10, ry), 2)
+        pygame.draw.line(screen, (255, 255, 255), (rx, ry - 10), (rx, ry + 10), 2)
     return (rx, ry)
+
+def velocity(tmplog):
+    vel = []
+    for i in range(len(tmplog) - 1):
+        vel.append([distance((tmplog[i][3], tmplog[i][4]), (tmplog[i + 1][3], tmplog[i + 1][4])), 0])
+    index = vel.index(max(vel)) + 1
+    return [tmplog[index][3], tmplog[index][4]]
 
 class Recorder:
 
     def __init__(self, subjectName):
         self.log = []
         self.log.append(["block", "cycle", "target", "x", "y"])
+        self.vel = []
+        self.vel.append(["block", "cycle", "targetX", "targetY", "x", "y", "errordeg"])
         self.date = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.dirname = 'results/' + self.date + subjectName
         os.makedirs(self.dirname)
 
     def append(self, d):
         self.log = self.log + d
-        
+
+    def velappend(self, d):
+        self.vel = self.vel + d
+
     def end(self):
         logname = self.date + '.csv'
         with open(logname, 'w', newline = '') as f:
             writer = csv.writer(f)
             writer.writerows(self.log)
+        velname = self.date + 'vel' + '.csv'
+        with open(velname, 'w', newline = '') as f:
+            writer = csv.writer(f)
+            writer.writerows(self.vel)
         shutil.move(logname, self.dirname)
+        shutil.move(velname, self.dirname)
         sys.exit()
 
 if __name__ == "__main__":
