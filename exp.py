@@ -1,7 +1,9 @@
 import pygame
-import sys
+import sys, os, shutil
 import random
 import math
+import csv
+from datetime import datetime
 
 #様々な定数の決定
 BLOCK_NUM = 4
@@ -39,6 +41,7 @@ def main():
     #get subject name
     sbjName = input('Input subject name: ')
     #もろもろの初期化。最初に１回やればいい。
+    recorder = Recorder(sbjName)
     pygame.init()
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
@@ -52,7 +55,8 @@ def main():
             #１サイクルごとにターゲット位置のリストをシャッフルする
             random.shuffle(TARGET_POS)
             for target in TARGET_POS:
-                task(screen, joystick, block, cycle, target)
+                recorder.append(task(screen, recorder, joystick, block, cycle, target))
+    recorder.end()
     return
 
 #単純に参加者がボタンを押すまで待つだけ
@@ -77,7 +81,7 @@ def ready(screen):
                 return
 
 #一回一回の課題の内容をここで定義する
-def task(screen, joystick, block, cycle, target):
+def task(screen, recorder, joystick, block, cycle, target):
     #FPS設定の準備
     clock = pygame.time.Clock()
     #文字表示の準備
@@ -87,6 +91,7 @@ def task(screen, joystick, block, cycle, target):
     #時間制限をつけるため、最初に許容フレーム数を入れておいてカウントダウンする
     remainingTime = TIMELIMIT
     frame = OFFSET
+    tmplog = []
     #カウントダウンタイマーが0より大きい限り繰り返す
     while remainingTime > 0:
         #FPSの設定
@@ -108,8 +113,12 @@ def task(screen, joystick, block, cycle, target):
         # pygame.draw.line(screen, (255, 255, 255), (SCREEN_CENTER[0] + 300, SCREEN_CENTER[1] - 300), (SCREEN_CENTER[0] - 300, SCREEN_CENTER[1] + 300))
         #カーソルを描画しその座標をposに格納する
         pos = drawCursor(screen, joystick, block)
+        tmplog.append([block, cycle, target, pos[0], pos[1]])
+        #print(clock.get_fps())
+        #screen.blit(text, (320, 240))
         dist = sysfont.render(str(distance(pos, SCREEN_CENTER)), True, (255, 255, 255))
         screen.blit(dist, (0, 0))
+
         pygame.display.update()
         #ループを一回繰り返すごとに（１フレームごとに）カウントダウンタイマーの値を１減らす
         remainingTime -= 1
@@ -159,7 +168,7 @@ def task(screen, joystick, block, cycle, target):
             if e.type == pygame.QUIT:
                 sys.exit()
                 return
-    return
+    return tmplog
 
 #カーソルを描画するための関数
 def drawCursor(screen, joystick, block):
@@ -177,6 +186,26 @@ def drawCursor(screen, joystick, block):
     pygame.draw.line(screen, (255, 255, 255), (rx - 10, ry), (rx + 10, ry), 2)
     pygame.draw.line(screen, (255, 255, 255), (rx, ry - 10), (rx, ry + 10), 2)
     return (rx, ry)
+
+class Recorder:
+
+    def __init__(self, subjectName):
+        self.log = []
+        self.log.append(["block", "cycle", "target", "x", "y"])
+        self.date = datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.dirname = 'results/' + self.date + subjectName
+        os.makedirs(self.dirname)
+
+    def append(self, d):
+        self.log = self.log + d
+        
+    def end(self):
+        logname = self.date + '.csv'
+        with open(logname, 'w', newline = '') as f:
+            writer = csv.writer(f)
+            writer.writerows(self.log)
+        shutil.move(logname, self.dirname)
+        sys.exit()
 
 if __name__ == "__main__":
     main()
