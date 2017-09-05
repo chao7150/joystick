@@ -5,25 +5,34 @@ import math
 
 #様々な定数の決定
 BLOCK_NUM = 4
-CYCLE_NUM = 4
-TARGET_POS = [0, 45, 90, 135, 180, 225, 270, 315]
+CYCLE_NUM = 1
+TARGET_POS = [
+[500,304],
+[638,359],
+[699,500],
+[657,658],
+[500,697],
+[337,663],
+[300,500],
+[343,341],
+]
 TARGET_DISTANCE = 300
 RADIUS = 10
 
-SCREEN_SIZE = (1000, 750)
+SCREEN_SIZE = (1000, 1000)
 SCREEN_CENTER = (int(SCREEN_SIZE[0] / 2), int(SCREEN_SIZE[1] / 2))
-JOYSTICK_SCALE = 350
+JOYSTICK_SCALE = 200
 
-FPS = 100
-ROTATE_ANGLE = [45, -45]
-TIMELIMIT = 300
-WAITTIME = 60
-OFFSET = 10
+FPS = 60
+ROTATE_ANGLE = [0, 0]
+TIMELIMIT = 3000
+WAITTIME = 50
+OFFSET = 1
 
 #2点間の距離を計算する関数。あちこちで使うので定義しておく。
 def distance(p1, p2):
-    d = ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
-    return d
+    return ((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2) ** 0.5
+
 
 #ここから始まる
 def main():
@@ -38,7 +47,7 @@ def main():
 
     #ブロック・サイクルの構造はここに集約しておく。ブロックが終わるたびにready()に飛んで休憩させる。
     for block in range(BLOCK_NUM):
-        ready(screen)
+        #ready(screen)
         for cycle in range(CYCLE_NUM):
             #１サイクルごとにターゲット位置のリストをシャッフルする
             random.shuffle(TARGET_POS)
@@ -46,25 +55,24 @@ def main():
                 task(screen, joystick, block, cycle, target)
     return
 
-#単純に参加者がENTERを押すまで待つだけ
+#単純に参加者がボタンを押すまで待つだけ
 def ready(screen):
     #最初に画面を黒で塗りつぶす（前の試行の画面を消す）
     screen.fill((0, 0, 0))
     #文字を表示するための準備
-    sysfont = pygame.font.SysFont(None, 40)
-    text = sysfont.render("PRESS ENTER", True, (255, 255, 255))
+    sysfont = pygame.font.SysFont(None, 50)
+    text = sysfont.render("PRESS ANY BOTTON", True, (255, 255, 255))
     #無限ループ
     while True:
         #準備した文字を表示する
         pygame.event.pump()
-        screen.blit(text, (320, 240))
+        screen.blit(text, (SCREEN_CENTER[0]-180,SCREEN_CENTER[1]))
         pygame.display.update()
-        print("a")
         for e in pygame.event.get():
             #ウィンドウ左上の終了ボタンが押されたらプログラムを終了する
             if e.type == pygame.QUIT:
                 sys.exit()
-            #エンターキーが押されたらmain()に戻る
+            #ボタンが押されたらmain()に戻る
             if e.type == pygame.JOYBUTTONUP:
                 return
 
@@ -89,22 +97,22 @@ def task(screen, joystick, block, cycle, target):
         else:
             screen.fill((100, 0, 0))
         #ターゲットの位置を計算
-        targetPosition = (
-            int(SCREEN_CENTER[0] + TARGET_DISTANCE * math.cos(math.radians(target))),
-            int(SCREEN_CENTER[1] + TARGET_DISTANCE * math.sin(math.radians(target)))
-        )
+        targetPosition = target
         #ターゲットの描画
         pygame.draw.circle(screen, (255, 255, 255), targetPosition, RADIUS, 2)
         #中心点の描画
         pygame.draw.circle(screen, (255, 255, 255), SCREEN_CENTER, RADIUS, 2)
+        # pygame.draw.line(screen, (255, 255, 255), (SCREEN_CENTER[0] - 200, SCREEN_CENTER[1]), (SCREEN_CENTER[0] + 200, SCREEN_CENTER[1]))
+        # pygame.draw.line(screen, (255, 255, 255), (SCREEN_CENTER[0], SCREEN_CENTER[1] - 200), (SCREEN_CENTER[0], SCREEN_CENTER[1] + 200))
+        # pygame.draw.line(screen, (255, 255, 255), (SCREEN_CENTER[0] - 300, SCREEN_CENTER[1] - 300), (SCREEN_CENTER[0] + 300, SCREEN_CENTER[1] + 300))
+        # pygame.draw.line(screen, (255, 255, 255), (SCREEN_CENTER[0] + 300, SCREEN_CENTER[1] - 300), (SCREEN_CENTER[0] - 300, SCREEN_CENTER[1] + 300))
         #カーソルを描画しその座標をposに格納する
         pos = drawCursor(screen, joystick, block)
-        #print(clock.get_fps())
-        #screen.blit(text, (320, 240))
+        dist = sysfont.render(str(distance(pos, SCREEN_CENTER)), True, (255, 255, 255))
+        screen.blit(dist, (0, 0))
         pygame.display.update()
         #ループを一回繰り返すごとに（１フレームごとに）カウントダウンタイマーの値を１減らす
         remainingTime -= 1
-        print(frame)
         #接触判定。カーソルとターゲットの距離が10以下ならループの外に出る
         if distance(pos, targetPosition) < RADIUS:
             frame -= 1
@@ -138,7 +146,6 @@ def task(screen, joystick, block, cycle, target):
             waitTime -= 1
             #中央を表す円の色を緑にする
             circleColor = (128, 255, 128)
-            print(waitTime)
         else:
             #カーソルが画面中央から離れるたびにwaitTimeを元に戻す（=中央に置き続けないと減らない）
             waitTime = WAITTIME
