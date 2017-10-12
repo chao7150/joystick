@@ -21,30 +21,22 @@ except pygame.error:
 def main():
     pygame.init()
     screen = pygame.display.set_mode( (SCREEN_WIDTH, SCREEN_HEIGHT) ) # 画面を作る
-    pygame.display.set_caption('Joystick') # タイトル
+    pygame.display.set_caption('Joystick') # ()タイトル
     pygame.display.flip() # 画面を反映
+    clock = pygame.time.Clock()
 
     while 1:
+        screen.fill((0,0,0))
+        pygame.event.pump()
+        clock.tick(60)
+        x , y = j.get_axis(0), j.get_axis(1)
+        pygame.draw.circle(screen, (255,0,0), (int((x+1)*320),int((y+1)*240)), 10)
+        print('x and y : ' + str(x) +' , '+ str(y))
+        print(clock.get_fps())
+        pygame.display.update()
+        for event in pygame.event.get():
 
-        for e in pygame.event.get(): # イベントチェック
-            if e.type == QUIT: # 終了が押された？
-                return
-            if (e.type == KEYDOWN and
-                e.key  == K_ESCAPE): # ESCが押された？
-                return
-            # Joystick関連のイベントチェック
-            if e.type == pygame.locals.JOYAXISMOTION: # 7
-                x , y = j.get_axis(0), j.get_axis(1)
-                pygame.draw.circle(screen, (255,0,0), (int(x*100),int(y*100)), 100)
-                print('x and y : ' + str(x) +' , '+ str(y))
-            elif e.type == pygame.locals.JOYBALLMOTION: # 8
-                print('ball motion')
-            elif e.type == pygame.locals.JOYHATMOTION: # 9
-                print('hat motion')
-            elif e.type == pygame.locals.JOYBUTTONDOWN: # 10
-                print(str(e.button)+'番目のボタンが押された')
-            elif e.type == pygame.locals.JOYBUTTONUP: # 11
-                print(str(e.button)+'番目のボタンが離された')
+            if event.type == QUIT:
+                sys.exit()
 
 if __name__ == '__main__': main()
-# end of file
