@@ -2,3 +2,5 @@ data
 test
 results
 .DS_Store
+fiiter.py
+Figure*
