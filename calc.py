@@ -23,6 +23,7 @@ for block in range(BLOCK_NUM):
     for s in x:
         y.append(logcurve(s, *params))
     plt.subplot(1, 3, block + 1)
-    plt.plot(x, err)
+    plt.ylim([0, 100])
+    plt.scatter(x, err, s=2)
     plt.plot(x, y)
 plt.show()
