@@ -14,8 +14,14 @@ CYCLE_NUM = dataframe["cycle"].max() + 1
 
 for block in range(BLOCK_NUM):
     blockdata = dataframe.query("block == @block")
-    err = blockdata["errordeg"].values.flatten()
-    x = list(range(1, 121))
+    err = []
+    for cycle in range(CYCLE_NUM):
+        cycledata = blockdata.query("cycle == @cycle")
+        cycle_err = cycledata["errordeg"].values.flatten()
+        ave_err = sum(cycle_err) / len(cycle_err)
+        err.append(ave_err)
+    print(err)
+    x = list(range(len(err)))
     res = opt.curve_fit(logcurve, x, err)
     params = res[0]
     print(params)
